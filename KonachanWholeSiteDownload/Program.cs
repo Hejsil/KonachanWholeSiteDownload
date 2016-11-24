@@ -18,9 +18,9 @@ namespace KonachanWholeSiteDownload
         {
             var url = @"http://konachan.net/";
             var client = new RestClient(url);
-            var images = new ConcurrentBag<Image>();
 
             var pageErrors = new ConcurrentBag<int>();
+            var errorImages = new ConcurrentBag<Image>();
             Parallel.For(1, 8651, i =>
             {
                 try
@@ -30,37 +30,27 @@ namespace KonachanWholeSiteDownload
 
                     foreach (var item in res)
                     {
-                        images.Add(item);
+                        try
+                        {
+                            var webClient = new WebClient();
+                            var ext = item.file_url.Split('.').LastOrDefault();
+
+                            if (ext == null)
+                                ext = "png";
+
+                            webClient.DownloadFile(item.file_url, $@"{args[0]}\{item.id}.{ext}");
+                        }
+                        catch (Exception)
+                        {
+                            errorImages.Add(item);
+                        }
                     }
                 }
-                catch (Exception)
+
+                catch
+                    (Exception)
                 {
                     pageErrors.Add(i);
-                }
-            });
-
-
-            const string dir = @"D:\Users\Jimmi\Pictures\All";
-
-            if (!Directory.Exists(dir))
-                Directory.CreateDirectory(dir);
-
-            var errorImages = new ConcurrentBag<Image>();
-            Parallel.ForEach(images, image =>
-            {
-                try
-                {
-                    var webClient = new WebClient();
-                    var ext = image.file_url.Split('.').LastOrDefault();
-
-                    if (ext == null)
-                        ext = "png";
-
-                    webClient.DownloadFile(image.file_url, $@"{dir}\{image.id}.{ext}");
-                }
-                catch (Exception)
-                {
-                    errorImages.Add(image);
                 }
             });
 
